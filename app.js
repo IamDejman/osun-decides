@@ -515,7 +515,11 @@
   });
 
   Promise.all([
-    fetch("/data/results.json").then(function (r) { return r.json(); }),
+    // no-store on the first load too: a cached results.json would show a
+    // coverage figure and vote totals from an earlier build, and on a page
+    // whose whole point is "how much is counted right now" that is worse
+    // than a slower load.
+    fetch("/data/results.json", { cache: "no-store" }).then(function (r) { return r.json(); }),
     fetch("/data/osun-lgas.geojson").then(function (r) { return r.json(); }).catch(function () { return null; })
   ]).then(function (res) {
     D = res[0]; GEO = res[1];

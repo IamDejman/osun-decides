@@ -88,20 +88,43 @@ def validate(r):
     valid = r.get("valid")
     acc = r.get("accredited")
     reg = r.get("registered")
-    rej = r.get("rejected") or 0
-    spo = r.get("spoiled") or 0
+    rej = r.get("rejected")
+    spo = r.get("spoiled")
     used = r.get("used")
     issued = r.get("issued")
     unused = r.get("unused")
 
-    if valid is None or s != valid:
+    # The load-bearing check. Fifteen figures, read one by one, independently
+    # reproducing the total the presiding officer wrote is strong evidence the
+    # reading is right - and it is evidence about the votes specifically.
+    if valid is None:
+        critical.append("no legible total valid votes to check the party figures against")
+    elif s != valid:
         critical.append("party votes total %s but sheet records %s valid" % (s, valid))
-    if used is not None and valid is not None and used != valid + rej + spo:
-        critical.append("used ballots %s but valid+rejected+spoiled = %s" % (used, valid + rej + spo))
+
     if acc is not None and valid is not None and valid > acc:
         critical.append("valid votes %s exceed accredited %s" % (valid, acc))
-    if r.get("unclear"):
-        critical.append(r["unclear"])
+
+    # Only evaluate this when every term is legible; a null term makes the
+    # identity untestable, not failed.
+    if None not in (used, valid, rej, spo):
+        if used != valid + rej + spo:
+            critical.append("used ballots %s but valid+rejected+spoiled = %s"
+                            % (used, valid + rej + spo))
+    elif used is not None:
+        accounting.append("used-ballot identity untestable: a term is illegible")
+
+    # A reader's free-text doubt holds the unit only when the doubt is about the
+    # votes themselves. Doubt about stationery boxes is reported, not decisive.
+    note = (r.get("unclear") or "")
+    if note:
+        low = note.lower()
+        vote_words = ("party", "row", "align", "attribut", "figure", "apc", "adc",
+                      "valid votes", "total valid")
+        if any(w in low for w in vote_words):
+            critical.append(note)
+        else:
+            accounting.append(note)
 
     if reg is not None and acc is not None and acc > reg:
         accounting.append("accredited %s exceeds registered %s" % (acc, reg))

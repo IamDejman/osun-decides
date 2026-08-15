@@ -5,3 +5,6 @@ work/
 .claude_launch_tmp
 __pycache__/
 *.pyc
+
+# operator review queue must never be published
+data/review.json
