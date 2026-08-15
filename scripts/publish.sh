@@ -36,6 +36,20 @@ git commit -q -m "data: $COUNTED of $TOTAL polling units counted"
 echo "committed on $BRANCH: $COUNTED/$TOTAL counted"
 
 if [ "$PUSH" = "1" ]; then
-  git push -q origin "$BRANCH"
-  echo "pushed to origin/$BRANCH"
+  # Anything else landing on the remote (a merged PR, a teammate) leaves this
+  # branch behind and every later push fails. Rebase our data commits on top
+  # first, so one unrelated merge cannot silently stop publishing for hours.
+  if ! git push -q origin "$BRANCH" 2>/dev/null; then
+    echo "push rejected, rebasing onto origin/$BRANCH"
+    git fetch -q origin "$BRANCH"
+    if git rebase -q "origin/$BRANCH"; then
+      git push -q origin "$BRANCH" && echo "pushed after rebase"
+    else
+      git rebase --abort 2>/dev/null || true
+      echo "REBASE CONFLICT: resolve by hand, publishing is paused" >&2
+      exit 1
+    fi
+  else
+    echo "pushed to origin/$BRANCH"
+  fi
 fi

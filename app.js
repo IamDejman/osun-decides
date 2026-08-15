@@ -495,8 +495,26 @@
   });
 
   function stamp() {
-    var when = (D.meta.polled_at || "").replace("T", " ").replace(/:\d\dZ$/, " UTC");
-    document.getElementById("footstamp").textContent = "Updated " + when;
+    var node = document.getElementById("footstamp");
+    var d = D.meta.polled_at ? new Date(D.meta.polled_at) : null;
+    if (!d || isNaN(d.getTime())) {
+      node.textContent = "Updated -";
+      return;
+    }
+    var parts = {};
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Lagos",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    }).formatToParts(d).forEach(function (p) { parts[p.type] = p.value; });
+    node.textContent = "Updated " + parts.weekday + ", " + parts.day + " " +
+      parts.month + " " + parts.year + " " + parts.hour + ":" + parts.minute +
+      " " + (parts.dayPeriod || "").toUpperCase();
   }
 
   var btn = document.getElementById("refresh");
