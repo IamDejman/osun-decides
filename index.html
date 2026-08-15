@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Osun Decides 2026</title>
+<meta name="description" content="Polling-unit results for the 2026 Osun State governorship election, read from the Form EC8A sheets published on INEC's IReV portal.">
+<meta property="og:title" content="Osun Decides 2026">
+<meta property="og:description" content="Every published Form EC8A, read and totalled, with the source sheet behind every figure.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="/styles.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23004F00'/><rect x='6' y='9' width='20' height='3' fill='%23FFFFFF'/><rect x='6' y='16' width='13' height='3' fill='%23FFFFFF'/><rect x='6' y='23' width='7' height='3' fill='%23FFFFFF'/></svg>">
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="masthead">
+      <h1>Osun Decides</h1>
+      <button class="refresh" id="refresh" type="button">Refresh</button>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-v="overview" aria-current="page">Results</button>
+      <button data-v="map">Map</button>
+      <button data-v="lgas">Local governments</button>
+      <button data-v="search">Search</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div class="loading" id="loading">Loading</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Source: INEC IReV</span>
+    <span>Not affiliated with INEC. Only INEC declares results.</span>
+    <span id="footstamp"></span>
+  </div>
+</footer>
+
+<script src="/app.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+work/
+*.tmp
+.DS_Store
+.vercel
+.claude_launch_tmp
+__pycache__/
+*.pyc
