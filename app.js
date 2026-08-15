@@ -5,6 +5,8 @@
 (function () {
   "use strict";
 
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+
   var D = null, GEO = null, view = "overview";
   var sortKey = "code", sortAsc = true, openLga = null;
   var main = document.getElementById("main");
@@ -284,9 +286,11 @@
     top.appendChild(el("span", "pucode", u.code));
     top.appendChild(el("span", "puname", u.name || "-"));
     if (!u.votes) top.appendChild(el("span", "chip await", "Not counted"));
-    if (u.img) {
+    if (u.img && /^https:\/\//i.test(u.img)) {
       var a = el("a", "chip sheet", "Sheet");
-      a.href = u.img; a.target = "_blank"; a.rel = "noopener";
+      a.href = u.img;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
       a.setAttribute("aria-label", "Open the EC8A sheet for polling unit " + u.code);
       top.appendChild(a);
     }
