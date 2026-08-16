@@ -1,1 +1,17 @@
-{}
+{
+ "A": "/assets/parties/A.jpg",
+ "AA": "/assets/parties/AA.jpg",
+ "AAC": "/assets/parties/AAC.jpg",
+ "ADC": "/assets/parties/ADC.jpg",
+ "ADP": "/assets/parties/ADP.png",
+ "APC": "/assets/parties/APC.jpg",
+ "APGA": "/assets/parties/APGA.jpg",
+ "APM": "/assets/parties/APM.jpg",
+ "APP": "/assets/parties/APP.png",
+ "BP": "/assets/parties/BP.jpg",
+ "NNPP": "/assets/parties/NNPP.jpg",
+ "PRP": "/assets/parties/PRP.png",
+ "SDP": "/assets/parties/SDP.png",
+ "YPP": "/assets/parties/YPP.png",
+ "ZLP": "/assets/parties/ZLP.jpg"
+}
