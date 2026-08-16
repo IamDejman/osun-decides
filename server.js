@@ -49,6 +49,9 @@ const CSP = [
   "upgrade-insecure-requests",
 ].join("; ");
 
+// Paths that must never be served, matched before anything touches the disk.
+const PRIVATE = /^\/(work|scripts|node_modules)(\/|$)|(^|\/)\.[^/]/;
+
 function cacheFor(pathname, ext) {
   // data/ is the live count: allow a CDN to hold it briefly, never a browser.
   if (pathname.startsWith("/data/")) {
@@ -86,6 +89,15 @@ const server = http.createServer(function (req, res) {
   // Railway health checks hit this; it must not depend on any file.
   if (pathname === "/healthz") {
     return send(res, 200, "ok", { "Content-Type": "text/plain" });
+  }
+
+  // Never serve operator state, however the working tree happens to look.
+  // work/ holds the sheet images, raw reader output and the review queue,
+  // which is deliberately unpublished; scripts/ and .git are nobody's
+  // business either. These are gitignored so a clean deploy lacks them, but
+  // the server must not depend on that being true.
+  if (PRIVATE.test(pathname)) {
+    return send(res, 404, "Not found", { "Content-Type": "text/plain" });
   }
 
   if (pathname === "/") pathname = "/index.html";
