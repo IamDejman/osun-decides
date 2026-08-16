@@ -65,26 +65,31 @@ def read_transcripts():
     return out
 
 
+def party_column(r):
+    """Return (sum, illegible_codes). Missing party keys count as 0.
+    An explicit null on a party row means that row could not be read."""
+    v = r.get("votes") or {}
+    illegible = [p for p in PARTIES if p in v and v[p] is None]
+    s = 0
+    for p in PARTIES:
+        if p in v and v[p] is None:
+            continue
+        s += int(v.get(p) or 0)
+    return s, illegible
+
+
 def validate(r):
     """Arithmetic cross-checks on one EC8A. Returns (reasons, ok).
 
-    The form carries its own redundancy, so a reading that satisfies every
-    identity is almost certainly right. But the identities are not equally
-    informative about the votes:
+    The public report uses the fifteen party figures whenever that column
+    can be read. Box #7 and the stationery identities are checks: they are
+    reported when they fail, but they do not withhold the unit.
 
-    * Vote-critical checks bear directly on the party figures. Failing one
-      means the reading may be wrong, so the unit is held out of all totals.
-    * Ballot-accounting checks (issued = unused + used) constrain stationery,
-      not votes. Presiding officers miswrite these boxes fairly often, and a
-      failure there says nothing about whether the party figures were read
-      correctly. Those are reported for review but still counted.
-
-    Both kinds are surfaced to the operator either way; only the first kind
-    withholds the unit.
+    A unit is held only when the party column itself is unusable: a party
+    row is null, or the form has no party figures and no box #7.
     """
-    v = r.get("votes") or {}
     critical, accounting = [], []
-    s = sum(v.values())
+    s, illegible = party_column(r)
     valid = r.get("valid")
     acc = r.get("accredited")
     reg = r.get("registered")
@@ -94,37 +99,31 @@ def validate(r):
     issued = r.get("issued")
     unused = r.get("unused")
 
-    # The load-bearing check. Fifteen figures, read one by one, independently
-    # reproducing the total the presiding officer wrote is strong evidence the
-    # reading is right - and it is evidence about the votes specifically.
+    if illegible:
+        critical.append("party row%s unreadable: %s"
+                        % ("s" if len(illegible) > 1 else "", ", ".join(illegible)))
+    elif s == 0 and valid is None:
+        critical.append("no legible party figures or total valid votes")
+
     if valid is None:
-        critical.append("no legible total valid votes to check the party figures against")
+        if s:
+            accounting.append("box 7 blank, using party total %s" % s)
     elif s != valid:
-        critical.append("party votes total %s but sheet records %s valid" % (s, valid))
+        accounting.append("party votes total %s but sheet records %s valid" % (s, valid))
 
     if acc is not None and valid is not None and valid > acc:
-        critical.append("valid votes %s exceed accredited %s" % (valid, acc))
+        accounting.append("valid votes %s exceed accredited %s" % (valid, acc))
 
-    # Only evaluate this when every term is legible; a null term makes the
-    # identity untestable, not failed.
     if None not in (used, valid, rej, spo):
         if used != valid + rej + spo:
-            critical.append("used ballots %s but valid+rejected+spoiled = %s"
-                            % (used, valid + rej + spo))
+            accounting.append("used ballots %s but valid+rejected+spoiled = %s"
+                              % (used, valid + rej + spo))
     elif used is not None:
         accounting.append("used-ballot identity untestable: a term is illegible")
 
-    # A reader's free-text doubt holds the unit only when the doubt is about the
-    # votes themselves. Doubt about stationery boxes is reported, not decisive.
     note = (r.get("unclear") or "")
     if note:
-        low = note.lower()
-        vote_words = ("party", "row", "align", "attribut", "figure", "apc", "adc",
-                      "valid votes", "total valid")
-        if any(w in low for w in vote_words):
-            critical.append(note)
-        else:
-            accounting.append(note)
+        accounting.append(note)
 
     if reg is not None and acc is not None and acc > reg:
         accounting.append("accredited %s exceeds registered %s" % (acc, reg))

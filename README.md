@@ -71,24 +71,28 @@ Each EC8A states its figures twice, in digits and in words, and carries several
 arithmetic identities. `scripts/common.py::validate` splits them by what they
 actually tell you about the votes:
 
-**Vote-critical** — failing one means the reading may be wrong, so the unit is
-held out of every total on the site:
+**Vote-critical** — the unit is held only when the party column cannot be
+used:
 
-- the fifteen party scores sum to the total valid votes on the sheet
-- used ballots equal valid + rejected + spoiled
-- valid votes do not exceed accredited voters
+- a party row is null (illegible)
+- no party figures and no box #7 (blank or unreadable form)
+
+**Reported, with a flag** — the fifteen party figures enter the totals even
+when the rest of the sheet does not add up. The unit is marked on the site:
+
+- party scores do not sum to box #7
+- box #7 is blank (published valid is the party sum)
+- used ballots do not equal valid + rejected + spoiled
+- valid votes exceed accredited voters
 - anything the reader marked `unclear`
 
-**Ballot accounting** — constrains stationery, not votes. Presiding officers
-miswrite these boxes fairly often and it says nothing about whether the party
-figures were read correctly, so the unit is still counted, and still reported:
+**Ballot accounting** — stationery only, counted, not flagged on the site:
 
 - ballots issued equal unused + used
 - accredited voters do not exceed registered voters
 
 Everything with any failure lands in `work/review.json` for a human to check
-against the image. That file is deliberately **not** published: the website
-carries only figures that passed.
+against the image. That file is not published.
 
 ## Adding a transcription
 
@@ -105,7 +109,8 @@ correcting a unit means appending a new line rather than editing an old one.
 ```
 
 Set a field to `null` when a box is genuinely illegible, and add an `unclear`
-string to force the unit into review.
+string describing the problem. A null party row holds the unit; other notes
+are reported and the party figures are still counted.
 
 ## Layout
 

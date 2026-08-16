@@ -1,7 +1,7 @@
 /* Osun 2026 polling unit results - static client.
    Reads /data/results.json (rebuilt whenever new sheets are read) and
-   /data/osun-lgas.geojson for the map. Only figures that passed every
-   arithmetic check reach this file. */
+   /data/osun-lgas.geojson for the map. Party figures from a readable
+   column are published even when the rest of the sheet does not add up. */
 (function () {
   "use strict";
 
@@ -42,6 +42,28 @@
   }
   function counted(v) { return ranked(v).filter(function (x) { return x[1] > 0; }); }
   function dot(p) { var i = el("i", "dot"); i.style.background = pcol(p); return i; }
+
+  /* Official party emblems from INEC's own register. The coloured dot stays
+     the fallback whenever a logo is missing, because the map, the share bars
+     and the ward summaries all key off PCOL - if a party appeared as a logo
+     here and a colour there, the two would stop agreeing. */
+  var LOGOS = {};
+  function emblem(p, size) {
+    if (!LOGOS[p]) return dot(p);
+    var i = document.createElement("img");
+    i.className = "plogo";
+    i.src = LOGOS[p];
+    i.alt = "";               // decorative: the party name is always beside it
+    i.loading = "lazy";
+    i.width = size || 20;
+    i.height = size || 20;
+    i.style.setProperty("--lsz", (size || 20) + "px");
+    i.onerror = function () {
+      var d = dot(p);
+      if (i.parentNode) i.parentNode.replaceChild(d, i);
+    };
+    return i;
+  }
   function sechead(title, note) {
     var s = el("section", "sec");
     s.appendChild(el("h2", null, title));
@@ -79,23 +101,50 @@
     }
     var margin = withVotes.length > 1 ? withVotes[0][1] - withVotes[1][1] : withVotes[0][1];
 
+    /* A bare "51.9%" and a bare "+60,142" carry no weight and read as
+       footnotes. Each party gets its share drawn to scale, and every number
+       is labelled with what it counts, because the count is the thing people
+       actually read. */
+    function share(p, votes, big) {
+      var w = el("div", "pshare");
+      var bar = el("div", "pbar");
+      var fill = el("i");
+      fill.style.width = pct(votes, tot).toFixed(1) + "%";
+      fill.style.background = pcol(p);
+      bar.appendChild(fill);
+      w.appendChild(bar);
+      var f = el("div", "pfig");
+      var pcv = el("span", "ppc" + (big ? " big" : ""), pc1(votes, tot));
+      f.appendChild(pcv);
+      f.appendChild(el("span", "plabel", "of votes counted"));
+      w.appendChild(f);
+      return w;
+    }
+
     var a = el("div", "lcol");
     var l1 = el("div", "pline");
-    l1.appendChild(dot(withVotes[0][0]));
+    l1.appendChild(emblem(withVotes[0][0], 30));
     l1.appendChild(document.createTextNode(pname(withVotes[0][0])));
     l1.appendChild(el("span", "flagtag", "Leading"));
     a.appendChild(l1);
     a.appendChild(el("div", "big", fmt(withVotes[0][1])));
-    a.appendChild(el("div", "under", pc1(withVotes[0][1], tot) +
-      (withVotes.length > 1 ? "  ·  +" + fmt(margin) + " over " + pname(withVotes[1][0]) : "")));
+    a.appendChild(el("div", "vlabel", "votes"));
+    a.appendChild(share(withVotes[0][0], withVotes[0][1], true));
     if (withVotes.length > 1) {
+      var lead = el("div", "leadbox");
+      lead.appendChild(el("div", "leadnum", "+" + fmt(margin)));
+      lead.appendChild(el("div", "leadlbl",
+        "votes ahead of " + pname(withVotes[1][0])));
+      a.appendChild(lead);
+
       var second = el("div", "runner");
       var l2 = el("div", "pline");
-      l2.appendChild(dot(withVotes[1][0]));
+      l2.appendChild(emblem(withVotes[1][0], 24));
       l2.appendChild(document.createTextNode(pname(withVotes[1][0])));
       second.appendChild(l2);
       second.appendChild(el("div", "mid", fmt(withVotes[1][1])));
-      second.appendChild(el("div", "under", pc1(withVotes[1][1], tot)));
+      second.appendChild(el("div", "vlabel", "votes"));
+      second.appendChild(share(withVotes[1][0], withVotes[1][1], false));
       a.appendChild(second);
     }
     box.appendChild(a);
@@ -107,7 +156,7 @@
     list.style.setProperty("--rows", Math.ceil(others.length / 2));
     others.forEach(function (r) {
       var row = el("li", "rrow" + (r[1] ? "" : " zero"));
-      row.appendChild(dot(r[0]));
+      row.appendChild(emblem(r[0], 16));
       row.appendChild(el("span", null, pname(r[0])));
       row.appendChild(el("span", "rnum", fmt(r[1])));
       row.appendChild(el("span", "rpc", r[1] ? pc1(r[1], tot) : "-"));
@@ -193,27 +242,62 @@
         fill = pcol(lead);
         op = 0.3 + Math.min(0.7, marg / 45 * 0.7);
       }
-      var p = svg("path", { d: pathFor(ft.geometry), fill: fill, "fill-opacity": op,
-        stroke: "#fff", "stroke-width": 1, class: "lgapath", tabindex: "0",
-        "data-name": ft.properties.name });
+      var complete = !!(t && t.pu_total && t.pu_transcribed === t.pu_total);
+      // A plain-text summary for screen readers and as the accessible name.
+      // Deliberately NOT an SVG <title>: the browser draws its own tooltip
+      // from that, on top of the styled one, and you get two boxes at once.
       var label = ft.properties.name;
       if (L) {
         label += lead
-          ? "  ·  " + pname(lead) + " +" + marg.toFixed(1) + " pts  ·  " +
-            t.pu_transcribed + "/" + t.pu_total + " units"
-          : "  ·  not yet counted";
+          ? ", " + pname(lead) + " leading with " + fmt(rows[0][1]) + " votes, " +
+            t.pu_transcribed + " of " + t.pu_total + " units counted"
+          : ", not yet counted";
       }
-      var ttl = svg("title", {});
-      ttl.textContent = label;
-      p.appendChild(ttl);
+      var p = svg("path", { d: pathFor(ft.geometry), fill: fill, "fill-opacity": op,
+        stroke: "#fff", "stroke-width": 1, class: "lgapath", tabindex: "0",
+        role: "img", "aria-label": label, "data-name": ft.properties.name });
+
+      // Counts, not percentage points: a margin in points says nothing about
+      // how many people it represents, and the map gets screenshotted.
+      function fillTip() {
+        tip.textContent = "";
+        var head = el("div", "tiphead");
+        head.appendChild(el("span", "tipname", ft.properties.name));
+        if (complete) {
+          var tick = el("span", "tipdone");
+          tick.appendChild(el("i", "tick", "✓"));
+          tick.appendChild(document.createTextNode("all " + t.pu_total + " units counted"));
+          head.appendChild(tick);
+        } else if (t) {
+          head.appendChild(el("span", "tipunits",
+            fmt(t.pu_transcribed) + " of " + fmt(t.pu_total) + " units"));
+        }
+        tip.appendChild(head);
+        if (!rows.length) {
+          tip.appendChild(el("div", "tiprow", "not yet counted"));
+          return;
+        }
+        rows.slice(0, 3).forEach(function (r, i) {
+          var row = el("div", "tiprow" + (i === 0 && complete ? " won" : ""));
+          var sw = el("i", "tipdot"); sw.style.background = pcol(r[0]);
+          row.appendChild(sw);
+          row.appendChild(el("span", "tipparty", pname(r[0])));
+          row.appendChild(el("span", "tipnum", fmt(r[1])));
+          tip.appendChild(row);
+        });
+      }
+
       function show(e) {
         tip.hidden = false;
-        tip.textContent = label;
+        fillTip();
         var r = s1.getBoundingClientRect();
         var x = (e.clientX || r.left + r.width / 2) - r.left;
         var y = (e.clientY || r.top) - r.top;
-        tip.style.left = Math.max(6, Math.min(r.width - 200, x - 90)) + "px";
-        tip.style.top = Math.max(0, y - 46) + "px";
+        // Measure after filling: the box is now several rows tall, so a fixed
+        // offset would either sit under the cursor or run off the top edge.
+        var w = tip.offsetWidth, h = tip.offsetHeight;
+        tip.style.left = Math.max(4, Math.min(r.width - w - 4, x - w / 2)) + "px";
+        tip.style.top = (y - h - 12 < 0 ? y + 18 : y - h - 12) + "px";
       }
       p.addEventListener("mousemove", show);
       p.addEventListener("focus", show);
@@ -286,6 +370,7 @@
     top.appendChild(el("span", "pucode", u.code));
     top.appendChild(el("span", "puname", u.name || "-"));
     if (!u.votes) top.appendChild(el("span", "chip await", "Not counted"));
+    else if (u.flag) top.appendChild(el("span", "chip warn", u.flag));
     if (u.img && /^https:\/\//i.test(u.img)) {
       var a = el("a", "chip sheet", "Sheet");
       a.href = u.img;
@@ -542,7 +627,8 @@
     // whose whole point is "how much is counted right now" that is worse
     // than a slower load.
     fetch("/data/results.json", { cache: "no-store" }).then(function (r) { return r.json(); }),
-    fetch("/data/osun-lgas.geojson").then(function (r) { return r.json(); }).catch(function () { return null; })
+    fetch("/data/osun-lgas.geojson").then(function (r) { return r.json(); }).catch(function () { return null; }),
+    fetch("/data/party-logos.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
   ]).then(function (res) {
     D = res[0]; GEO = res[1];
     stamp(); render();

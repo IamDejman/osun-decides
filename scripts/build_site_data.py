@@ -22,7 +22,7 @@ def add(into, votes):
 
 
 def rollup(units):
-    """Aggregate only over units whose sheet has been transcribed and passes checks."""
+    """Aggregate units whose party column could be read."""
     t = {"votes": blank(), "registered": 0, "accredited": 0, "valid": 0,
          "rejected": 0, "spoiled": 0, "pu_total": 0, "pu_uploaded": 0,
          "pu_transcribed": 0, "pu_review": 0}
@@ -72,11 +72,25 @@ def main():
             else:
                 reasons, ok = validate(r)
                 u["status"] = "transcribed" if ok else "review"
-                u["votes"] = {k: r["votes"].get(k, 0) for k in PARTIES}
+                raw = r.get("votes") or {}
+                u["votes"] = {k: 0 if raw.get(k) is None else int(raw[k]) for k in PARTIES}
+                party_sum = sum(u["votes"].values())
                 for k in ("registered", "accredited", "issued", "unused",
                           "spoiled", "rejected", "valid", "used", "sn", "po"):
                     if r.get(k) is not None:
                         u[k] = r[k]
+                # Report the party column. If box #7 is blank or disagrees,
+                # the published valid total is the party sum so it matches
+                # the votes that entered the headline.
+                if ok:
+                    sheet_valid = r.get("valid")
+                    if sheet_valid is None or sheet_valid != party_sum:
+                        u["valid"] = party_sum
+                        if sheet_valid is None:
+                            u["flag"] = "Sheet total blank"
+                        else:
+                            u["sheet_valid"] = sheet_valid
+                            u["flag"] = "Sheet total does not match"
                 if reasons:
                     u["review_reasons"] = reasons
                     review_queue.append({
