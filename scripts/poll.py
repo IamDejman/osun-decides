@@ -6,20 +6,13 @@ ready to transcribe. It deliberately does NOT invent vote figures: a sheet it
 has just fetched is recorded as awaiting transcription until a reader has
 actually read it.
 
-  python3 scripts/poll.py           # fast pass: stats + 100 most recent uploads
-  python3 scripts/poll.py --full    # full sweep of all 332 wards
+  python3 scripts/poll.py           # sweep all 332 wards, fetch new images
 """
 import json, os, subprocess, sys, time, urllib.request
 import concurrent.futures as cf
-from common import (API, DATA, SHEETS, WORK, get, load_json, save_json)
+from common import (API, SHEETS, WORK, get, save_json)
 
 INV = os.path.join(WORK, "inventory.json")
-
-# A full sweep costs ~40s over 332 wards, so it is not a per-minute operation,
-# but it is the only pass that cannot miss a sheet. Force one at least this
-# often even when the counts happen to agree.
-FULL_SWEEP_EVERY = 600  # seconds
-
 
 def fetch_structure():
     """LGA -> wards -> polling units, with whatever document each PU has."""
@@ -69,54 +62,40 @@ def download(code, url):
 
 
 def main():
-    full = "--full" in sys.argv
-    inv = load_json(INV, default=None)
-    if inv is None:
-        full = True     # nothing cached yet, so a full sweep is the only option
-
     stats = get(API + "/result/stats")["data"]
     remote_docs = stats.get("documents")
 
-    # The recent feed is not a reliable tail of everything published: observed
-    # in practice reporting nothing new while the portal's own document count
-    # had moved by 63. So never trust it alone. Sweep everything whenever the
-    # inventory disagrees with the portal at all, or when the last full sweep
-    # has aged out.
-    if not full and inv is not None:
-        local = sum(1 for w in inv["wards"] for p in w["pus"] if p.get("doc_url"))
-        age = time.time() - inv.get("full_swept_ts", 0)
-        if remote_docs and remote_docs != local:
-            print("inventory %d, portal %s: sweeping everything" % (local, remote_docs))
-            full = True
-        elif age > FULL_SWEEP_EVERY:
-            print("last full sweep %d min ago, sweeping everything" % (age / 60))
-            full = True
-
-    if full:
-        print("full sweep of all wards...")
-        inv = {"wards": fetch_structure()}
-    else:
-        # Cheap path: the 100 most recently uploaded sheets. At observed upload
-        # rates that is far more headroom than one minute needs.
-        recent = get(API + "/pus/recent")["data"] or []
-        by_code = {}
-        for w in inv["wards"]:
-            for p in w["pus"]:
-                by_code[p["pu_code"]] = p
-        changed = 0
-        for r in recent:
-            doc = r.get("document") or {}
-            p = by_code.get(r.get("pu_code"))
-            if p is None or not doc.get("url"):
-                continue
-            if p.get("doc_url") != doc["url"]:
-                p["doc_url"] = doc["url"]
-                p["doc_time"] = doc.get("updated_at")
-                changed += 1
-        print("recent pass: %d sheet(s) new or replaced" % changed)
-
-    if full:
-        inv["full_swept_ts"] = time.time()
+    # Always walk every ward. /pus/recent is not a tail of new uploads: it
+    # has sat on sheets from 15 minutes ago while /result/stats and the
+    # public page had already moved on. A full sweep is ~40s and is the
+    # only pass that cannot miss a sheet.
+    print("full sweep of all wards (portal %s)..." % remote_docs)
+    inv = {"wards": fetch_structure()}
+    # /pus?ward= lags /result/stats. Overlay the recent feed so a sheet
+    # that stats already counted is not invisible for the next ten minutes.
+    by_code = {}
+    for w in inv["wards"]:
+        for p in w["pus"]:
+            by_code[p["pu_code"]] = p
+    patched = 0
+    for r in (get(API + "/pus/recent")["data"] or []):
+        doc = r.get("document") or {}
+        p = by_code.get(r.get("pu_code"))
+        if p is None or not doc.get("url"):
+            continue
+        if p.get("doc_url") != doc["url"]:
+            p["doc_url"] = doc["url"]
+            p["doc_time"] = doc.get("updated_at")
+            patched += 1
+    latest = (stats.get("latest") or {}).get("document") or {}
+    lp = by_code.get((stats.get("latest") or {}).get("pu_code"))
+    if lp is not None and latest.get("url") and lp.get("doc_url") != latest["url"]:
+        lp["doc_url"] = latest["url"]
+        lp["doc_time"] = latest.get("updated_at")
+        patched += 1
+    if patched:
+        print("patched %d unit(s) from recent/latest that the ward listing omitted" % patched)
+    inv["full_swept_ts"] = time.time()
     inv["polled_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     inv["remote_documents"] = remote_docs
     save_json(INV, inv)
