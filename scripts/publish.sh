@@ -7,6 +7,10 @@
 #
 #   BRANCH=live-data scripts/publish.sh      # commit to a branch (default)
 #   BRANCH=main PUSH=1 scripts/publish.sh    # commit and push
+#
+# Do not leave PUSH=1 on a five-minute schedule. Vercel free counts every
+# push as a deploy (100/day). After the site reads results.json from
+# GitHub, data pushes no longer need a Vercel build.
 set -e
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DIR"
