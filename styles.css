@@ -161,6 +161,7 @@ details.ward>summary:hover{background:var(--bg-2)}
 .chip{font-size:12px;line-height:20px;font-weight:500;padding:2px 10px;border-radius:var(--r);
   white-space:nowrap;text-decoration:none;border:1px solid var(--line);color:var(--muted)}
 .chip.await{border-color:#f1c9c9;background:#fbeeee;color:var(--flag)}
+.chip.warn{border-color:#ead8a8;background:#f8f1dc;color:#7a5b14}
 .chip.sheet{border-color:var(--green);color:var(--green)}
 .chip.sheet:hover{background:var(--green);color:#fff}
 
@@ -190,3 +191,40 @@ footer .wrap{padding:18px 24px 34px;font-size:13px;color:var(--muted);
   td{font-size:13px}
   .hide-s{display:none}
 }
+
+/* ---------- party emblems ---------- */
+/* Fixed box, contained: a logo must never set the height of a row, or the
+   "other parties" list loses its rhythm. Falls back to .dot when missing. */
+.plogo{width:var(--lsz,20px);height:var(--lsz,20px);flex:none;object-fit:contain;
+  display:inline-block;background:#fff;border:1px solid var(--line-2);border-radius:2px;padding:1px}
+.rrow .plogo{width:16px;height:16px}
+
+/* ---------- lede figures ---------- */
+.vlabel{margin-top:2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pshare{margin-top:12px;max-width:340px}
+.pbar{height:8px;background:var(--line-2);border-radius:2px;overflow:hidden}
+.pbar i{display:block;height:100%}
+.pfig{display:flex;align-items:baseline;gap:7px;margin-top:6px}
+.ppc{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.ppc.big{font-size:26px}
+.plabel{font-size:12px;color:var(--muted)}
+.leadbox{margin-top:16px;padding:10px 14px;background:var(--bg-2);border-left:3px solid var(--green);
+  border-radius:0 var(--r) var(--r) 0;display:inline-block}
+.leadnum{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.leadlbl{margin-top:2px;font-size:12px;color:var(--muted)}
+.runner{margin-top:26px;padding-top:20px;border-top:1px solid var(--line-2)}
+
+/* ---------- map tooltip ---------- */
+.maptip{pointer-events:none;min-width:190px}
+.tiphead{display:flex;flex-direction:column;gap:2px;padding-bottom:6px;margin-bottom:6px;
+  border-bottom:1px solid rgba(255,255,255,.22)}
+.tipname{font-weight:600;letter-spacing:.02em}
+.tipunits,.tipdone{font-size:11px;opacity:.85}
+.tipdone{display:flex;align-items:center;gap:5px}
+.tick{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;
+  border-radius:50%;background:#fff;color:var(--green);font-size:9px;font-weight:700;flex:none}
+.tiprow{display:grid;grid-template-columns:9px 1fr auto;gap:8px;align-items:center;
+  padding:2px 0;font-size:12px}
+.tiprow.won .tipparty{font-weight:700}
+.tipdot{width:9px;height:9px;border-radius:2px;display:inline-block}
+.tipnum{font-variant-numeric:tabular-nums;font-weight:600}
