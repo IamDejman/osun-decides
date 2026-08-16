@@ -19,18 +19,18 @@
   "YPP",
   "ZLP"
  ],
- "polled_at": "2026-08-16T18:13:47Z",
- "built_at": "2026-08-16T18:14:18Z",
+ "polled_at": "2026-08-16T18:15:52Z",
+ "built_at": "2026-08-16T18:16:43Z",
  "remote_documents": 3724,
  "source": "https://www.inecelectionresults.ng/elections/6a7f788adcbc755a763f082a",
  "totals": {
   "votes": {
-   "A": 508081,
-   "AA": 2296,
+   "A": 508255,
+   "AA": 2298,
    "AAC": 1452,
-   "ADC": 17186,
+   "ADC": 17188,
    "ADP": 2895,
-   "APC": 441721,
+   "APC": 441755,
    "APGA": 1541,
    "APM": 233,
    "APP": 114,
@@ -38,17 +38,17 @@
    "NNPP": 116,
    "PRP": 84,
    "SDP": 159,
-   "YPP": 528,
+   "YPP": 529,
    "ZLP": 2474
   },
-  "registered": 2274690,
-  "accredited": 1002208,
-  "valid": 978989,
-  "rejected": 20118,
-  "spoiled": 3761,
+  "registered": 2275014,
+  "accredited": 1002428,
+  "valid": 979202,
+  "rejected": 20125,
+  "spoiled": 3772,
   "pu_total": 3763,
-  "pu_uploaded": 3724,
-  "pu_transcribed": 3711,
-  "pu_review": 1
+  "pu_uploaded": 3732,
+  "pu_transcribed": 3712,
+  "pu_review": 3
  }
 }
