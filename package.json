@@ -1,0 +1,8 @@
+{
+  "name": "osun-results",
+  "private": true,
+  "description": "Static Osun 2026 polling-unit results. Railway uses the Dockerfile; `npm start` is the fallback.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

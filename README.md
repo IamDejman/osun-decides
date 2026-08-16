@@ -12,8 +12,9 @@ code. The site is an independent transcription with no official standing.
 
 The repo is a static site. Railway serves it with nginx (`Dockerfile`).
 Connect the GitHub repo `IamDejman/osun-decides` in Railway, leave the root
-directory empty, and generate a public domain. It must listen on `$PORT`
-(the image already does).
+directory empty, and generate a public domain. Railway uses the Dockerfile
+(nginx on `$PORT`). `node server.js` is a fallback if you switch the service
+to Nixpacks.
 
 ```bash
 # optional local check
