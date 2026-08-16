@@ -34,6 +34,36 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
+# poll.py rewrites polled_at/built_at every minute. That is not new data.
+# Commit only when figures, coverage, or a unit record actually moved.
+if ! python3 -c "
+import json, subprocess, sys
+SKIP = {'polled_at', 'built_at'}
+
+def strip(x):
+    if isinstance(x, dict):
+        return {k: strip(v) for k, v in x.items() if k not in SKIP}
+    if isinstance(x, list):
+        return [strip(i) for i in x]
+    return x
+
+def at_head(path):
+    return json.loads(subprocess.check_output(['git', 'show', 'HEAD:' + path]))
+
+for path in ('data/results.json', 'data/status.json'):
+    try:
+        old = at_head(path)
+    except Exception:
+        sys.exit(0)
+    if strip(old) != strip(json.load(open(path))):
+        sys.exit(0)
+sys.exit(1)
+"; then
+  git restore --staged --worktree -- data
+  echo "no figure change, skipped"
+  exit 0
+fi
+
 COUNTED=$(python3 -c "import json;t=json.load(open('data/results.json'))['meta']['totals'];print(t['pu_transcribed'])")
 TOTAL=$(python3 -c "import json;t=json.load(open('data/results.json'))['meta']['totals'];print(t['pu_total'])")
 git commit -q -m "data: $COUNTED of $TOTAL polling units counted"
