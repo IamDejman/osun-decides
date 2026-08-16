@@ -19,9 +19,9 @@
   "YPP",
   "ZLP"
  ],
- "polled_at": "2026-08-16T04:41:58Z",
- "built_at": "2026-08-16T04:45:30Z",
- "remote_documents": 3614,
+ "polled_at": "2026-08-16T04:49:53Z",
+ "built_at": "2026-08-16T04:51:22Z",
+ "remote_documents": 3615,
  "source": "https://www.inecelectionresults.ng/elections/6a7f788adcbc755a763f082a",
  "totals": {
   "votes": {
@@ -47,7 +47,7 @@
   "rejected": 17721,
   "spoiled": 3329,
   "pu_total": 3763,
-  "pu_uploaded": 3614,
+  "pu_uploaded": 3615,
   "pu_transcribed": 3318,
   "pu_review": 296
  }
