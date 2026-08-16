@@ -630,7 +630,7 @@
     fetch("/data/osun-lgas.geojson").then(function (r) { return r.json(); }).catch(function () { return null; }),
     fetch("/data/party-logos.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
   ]).then(function (res) {
-    D = res[0]; GEO = res[1];
+    D = res[0]; GEO = res[1]; LOGOS = res[2] || {};
     stamp(); render();
     // Pick up new figures without a reload while the count is running.
     setInterval(pull, 60000);

@@ -215,7 +215,7 @@ footer .wrap{padding:18px 24px 34px;font-size:13px;color:var(--muted);
 .runner{margin-top:26px;padding-top:20px;border-top:1px solid var(--line-2)}
 
 /* ---------- map tooltip ---------- */
-.maptip{pointer-events:none;min-width:190px}
+.maptip{pointer-events:none;min-width:190px;line-height:1.35}
 .tiphead{display:flex;flex-direction:column;gap:2px;padding-bottom:6px;margin-bottom:6px;
   border-bottom:1px solid rgba(255,255,255,.22)}
 .tipname{font-weight:600;letter-spacing:.02em}
