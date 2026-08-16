@@ -20,7 +20,11 @@
     BP: "#6F7A38", NNPP: "#A8433A", PRP: "#66677A", SDP: "#957A34", YPP: "#3A7060",
     ZLP: "#7C6096"
   };
-  function pcol(p) { return PCOL[p] || "var(--muted)"; }
+  /* Colours sampled from each party's official INEC emblem, so the map, the
+     share bars and the logo beside them all say the same thing. PCOL above is
+     the fallback for anything the sampler could not read. */
+  var PHEX = {};
+  function pcol(p) { return PHEX[p] || PCOL[p] || "var(--muted)"; }
 
   /* The ballot prints Accord as a bare "A", which reads as a typo off the
      sheet, so it is spelled out everywhere the code would otherwise show. */
@@ -186,7 +190,8 @@
   /* ---------------- map ---------------- */
   function buildMap(interactive) {
     var f = document.createDocumentFragment();
-    f.appendChild(sechead("Leading party by local government", "Shade follows margin"));
+    f.appendChild(sechead("Leading party by local government",
+      "Full colour once every unit in the LGA is counted"));
     if (!GEO) { f.appendChild(el("div", "empty", "Map unavailable")); return f; }
 
     var byName = {};
@@ -229,6 +234,7 @@
     var s1 = svg("svg", { viewBox: "0 0 " + W + " " + H, class: "map",
       role: "img", "aria-label": "Osun local governments shaded by leading party" });
     var tip = el("div", "maptip"); tip.hidden = true;
+    var marks = [];
 
     GEO.features.forEach(function (ft) {
       var L = byName[(ft.properties.name || "").toUpperCase()];
@@ -240,7 +246,11 @@
         var tot = rows.reduce(function (x, y) { return x + y[1]; }, 0);
         marg = rows.length > 1 ? pct(rows[0][1] - rows[1][1], tot) : 100;
         fill = pcol(lead);
-        op = 0.3 + Math.min(0.7, marg / 45 * 0.7);
+        // Depth of colour answers "is this local government finished?", not
+        // "how big is the lead". Encoding the margin instead made a fully
+        // counted LGA with a modest lead look paler than a barely started one
+        // with a wide early lead - exactly backwards for reading the map.
+        op = (t && t.pu_total && t.pu_transcribed === t.pu_total) ? 1 : 0.34;
       }
       var complete = !!(t && t.pu_total && t.pu_transcribed === t.pu_total);
       // A plain-text summary for screen readers and as the accessible name.
@@ -310,7 +320,24 @@
         p.style.cursor = "pointer";
       }
       s1.appendChild(p);
+      // The leading party's emblem at the LGA centre. Only where something has
+      // been counted, and only once the shape is drawn, so it sits on top.
+      if (lead && ft.properties.c && LOGOS[lead]) {
+        var cxy = px(ft.properties.c);
+        var r0 = complete ? 13 : 10;
+        var halo = svg("circle", { cx: cxy[0], cy: cxy[1], r: r0 + 2,
+          fill: "#fff", stroke: "rgba(0,0,0,.25)", "stroke-width": 1,
+          class: "lgamarkbg", "pointer-events": "none" });
+        var im = svg("image", { x: cxy[0] - r0, y: cxy[1] - r0,
+          width: r0 * 2, height: r0 * 2, href: LOGOS[lead],
+          preserveAspectRatio: "xMidYMid meet",
+          class: "lgamark", "pointer-events": "none" });
+        im.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", LOGOS[lead]);
+        marks.push(halo); marks.push(im);
+      }
     });
+    // Drawn after every shape so no neighbouring polygon covers them.
+    marks.forEach(function (m) { s1.appendChild(m); });
 
     var holder = el("div", "mapwrap");
     holder.appendChild(s1); holder.appendChild(tip);
@@ -329,6 +356,17 @@
       k.appendChild(document.createTextNode(pname(p) + " " + seen[p]));
       leg.appendChild(k);
     });
+    // Say what the two depths mean, or the map reads as arbitrary shading.
+    var kf = el("span", "kitem");
+    var swf = el("i", "sw"); swf.style.background = "var(--muted)";
+    kf.appendChild(swf);
+    kf.appendChild(document.createTextNode("all units counted"));
+    leg.appendChild(kf);
+    var kp = el("span", "kitem");
+    var swp = el("i", "sw"); swp.style.background = "var(--muted)"; swp.style.opacity = ".34";
+    kp.appendChild(swp);
+    kp.appendChild(document.createTextNode("still counting"));
+    leg.appendChild(kp);
     var none = D.lgas.length - Object.keys(seen).reduce(function (a, k) { return a + seen[k]; }, 0);
     if (none > 0) {
       var k2 = el("span", "kitem");
@@ -628,9 +666,12 @@
     // than a slower load.
     fetch("/data/results.json", { cache: "no-store" }).then(function (r) { return r.json(); }),
     fetch("/data/osun-lgas.geojson").then(function (r) { return r.json(); }).catch(function () { return null; }),
-    fetch("/data/party-logos.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
+    fetch("/data/party-logos.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
+    fetch("/data/party-colours.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
   ]).then(function (res) {
     D = res[0]; GEO = res[1]; LOGOS = res[2] || {};
+    var ph = res[3] || {};
+    for (var k in ph) if (ph[k]) PHEX[k] = ph[k];
     stamp(); render();
     // Pick up new figures without a reload while the count is running.
     setInterval(pull, 60000);

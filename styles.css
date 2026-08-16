@@ -228,3 +228,7 @@ footer .wrap{padding:18px 24px 34px;font-size:13px;color:var(--muted);
 .tiprow.won .tipparty{font-weight:700}
 .tipdot{width:9px;height:9px;border-radius:2px;display:inline-block}
 .tipnum{font-variant-numeric:tabular-nums;font-weight:600}
+
+/* leading-party emblem pinned at each LGA centre */
+.lgamark{opacity:.97}
+.lgamarkbg{opacity:.92}
