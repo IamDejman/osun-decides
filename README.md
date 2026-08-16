@@ -8,6 +8,22 @@ The portal serves photographs of the sheets and no machine-readable figures, so
 every number here was read off an image and recorded against its polling unit
 code. The site is an independent transcription with no official standing.
 
+## Deploy to Railway
+
+The repo is a static site. Railway serves it with nginx (`Dockerfile`).
+Connect the GitHub repo `IamDejman/osun-decides` in Railway, leave the root
+directory empty, and generate a public domain. It must listen on `$PORT`
+(the image already does).
+
+```bash
+# optional local check
+docker build -t osun-results .
+docker run --rm -e PORT=8080 -p 8080:8080 osun-results
+```
+
+On Railway the page loads `results.json` from GitHub `main`, so a new count
+does not require a Railway rebuild. One deploy of the HTML/JS is enough.
+
 ## Deploy to Vercel
 
 No build step and no dependencies: it is plain HTML, CSS, JS plus JSON in
@@ -21,8 +37,8 @@ Or push the folder to a Git repo and import it at vercel.com. When Vercel asks
 for a framework preset, choose **Other**; leave build command and output
 directory empty.
 
-`vercel.json` sets a 30 second CDN cache on `/data/*` so a redeploy shows new
-figures quickly while still being cached for readers.
+`vercel.json` skips a build when only `data/` changed, and the live page
+reads totals from GitHub so data commits do not burn the free-plan deploy cap.
 
 ## How data gets in
 
