@@ -1,0 +1,13 @@
+.git
+.vercel
+work
+scripts
+*.tmp
+.DS_Store
+__pycache__
+*.pyc
+.claude_launch_tmp
+README.md
+CLAUDE.md
+railway.toml
+vercel.json

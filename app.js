@@ -640,9 +640,18 @@
       " " + (parts.dayPeriod || "").toUpperCase();
   }
 
+  /* Live totals come from GitHub, not from the last Vercel deploy. A data
+     commit must not burn a free-plan deploy slot. Localhost still reads
+     the file this folder just rebuilt. */
+  function resultsUrl() {
+    var host = location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") return "/data/results.json";
+    return "https://raw.githubusercontent.com/IamDejman/osun-decides/main/data/results.json";
+  }
+
   var btn = document.getElementById("refresh");
   function pull(manual) {
-    return fetch("/data/results.json", { cache: "no-store" })
+    return fetch(resultsUrl(), { cache: "no-store" })
       .then(function (r) { return r.json(); })
       .then(function (n) {
         if (!n || !n.meta) return;
@@ -664,7 +673,7 @@
     // coverage figure and vote totals from an earlier build, and on a page
     // whose whole point is "how much is counted right now" that is worse
     // than a slower load.
-    fetch("/data/results.json", { cache: "no-store" }).then(function (r) { return r.json(); }),
+    fetch(resultsUrl(), { cache: "no-store" }).then(function (r) { return r.json(); }),
     fetch("/data/osun-lgas.geojson").then(function (r) { return r.json(); }).catch(function () { return null; }),
     fetch("/data/party-logos.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
     fetch("/data/party-colours.json").then(function (r) { return r.json(); }).catch(function () { return {}; })
