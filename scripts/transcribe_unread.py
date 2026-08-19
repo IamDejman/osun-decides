@@ -7,12 +7,12 @@ and publish.sh stay responsible for folding the part into the site.
   python3 scripts/transcribe_unread.py          # up to LIMIT new sheets
   python3 scripts/transcribe_unread.py --limit 2
 """
-import base64, json, os, sys, urllib.request
+import base64, json, os, sys, urllib.error, urllib.request
 from common import PARTIES, SHEETS, WORK, load_json, read_transcripts
 
 OUT = os.path.join(WORK, "parts", "auto.jsonl")
 LIMIT = 6
-MODEL = "claude-sonnet-4-6"
+MODELS = ["claude-sonnet-4-6", "claude-sonnet-4-5", "claude-sonnet-4-20250514"]
 API = "https://api.anthropic.com/v1/messages"
 
 PROMPT = """Transcribe this INEC Form EC8A for the 15 August 2026 Osun governorship election.
@@ -52,28 +52,46 @@ def unread():
 
 
 def read_sheet(code, name, path, key):
-    img = base64.standard_b64encode(open(path, "rb").read()).decode("ascii")
-    body = {
-        "model": MODEL,
-        "max_tokens": 600,
-        "messages": [{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {
-                    "type": "base64", "media_type": "image/jpeg", "data": img}},
-                {"type": "text", "text": PROMPT % (code, name)},
-            ],
-        }],
-    }
-    req = urllib.request.Request(
-        API, data=json.dumps(body).encode(), method="POST",
-        headers={
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        })
-    with urllib.request.urlopen(req, timeout=120) as r:
-        msg = json.loads(r.read().decode())
+    raw = open(path, "rb").read()
+    # The API caps an image at 5MB once base64 has inflated it by a third.
+    if len(raw) > 4_000_000:
+        raise ValueError("image too large (%d bytes)" % len(raw))
+    img = base64.standard_b64encode(raw).decode("ascii")
+    last = None
+    for model in MODELS:
+        body = {
+            "model": model,
+            "max_tokens": 600,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {
+                        "type": "base64", "media_type": "image/jpeg", "data": img}},
+                    {"type": "text", "text": PROMPT % (code, name)},
+                ],
+            }],
+        }
+        req = urllib.request.Request(
+            API, data=json.dumps(body).encode(), method="POST",
+            headers={
+                "x-api-key": key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            })
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                msg = json.loads(r.read().decode())
+            break
+        except urllib.error.HTTPError as e:
+            err = e.read().decode("utf-8", "replace")[:400]
+            last = ValueError("HTTP %s %s" % (e.code, err))
+            if "credit balance" in err.lower():
+                raise last
+            if e.code in (404, 400) and "model" in err.lower():
+                continue
+            raise last
+    else:
+        raise last
     text = "".join(b.get("text") or "" for b in msg.get("content") or []
                    if b.get("type") == "text").strip()
     if text.startswith("```"):
@@ -120,6 +138,9 @@ def main():
                 rec = read_sheet(code, name, path, key)
             except Exception as e:      # noqa: BLE001 - one bad sheet must not stop the rest
                 print("transcribe fail %s: %s" % (code, e))
+                if "credit balance" in str(e).lower():
+                    print("transcribe: Anthropic credits empty, stopping")
+                    break
                 continue
             out.write(json.dumps(rec, separators=(",", ":")) + "\n")
             out.flush()
