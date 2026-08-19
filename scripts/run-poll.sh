@@ -18,9 +18,5 @@ READ_OUT="$(/usr/bin/python3 scripts/transcribe_unread.py 2>&1)" || true
 printf '%s\n' "$READ_OUT" >> work/poll.log
 # Keep the log from growing without bound.
 tail -n 2000 work/poll.log > work/poll.log.tmp && mv work/poll.log.tmp work/poll.log
-# If the reader wrote anything this run, fold it in and push.
-case "$READ_OUT" in
-  *"transcribe: wrote "[1-9]*)
-    BRANCH=main PUSH=1 /bin/sh "$DIR/scripts/publish.sh" >> work/publish.log 2>&1 || true
-    ;;
-esac
+# Always fold and push. publish.sh exits cleanly when data/ did not change.
+BRANCH=main PUSH=1 /bin/sh "$DIR/scripts/publish.sh" >> work/publish.log 2>&1 || true

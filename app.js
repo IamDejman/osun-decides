@@ -642,16 +642,24 @@
 
   /* Live totals come from GitHub, not from the last Vercel deploy. A data
      commit must not burn a free-plan deploy slot. Localhost still reads
-     the file this folder just rebuilt. */
-  function resultsUrl() {
+     the file this folder just rebuilt.
+
+     GitHub serves raw files with a five-minute CDN cache, so no-store alone
+     can still hand back the previous build. The automatic poll lives with
+     that: busting the cache every minute for every reader would trade a
+     little freshness for GitHub's anonymous rate limit. A reader who asks
+     for a refresh by hand is answering "is it current?", so that one gets a
+     unique URL and a genuine round trip. */
+  function resultsUrl(fresh) {
     var host = location.hostname;
     if (host === "localhost" || host === "127.0.0.1") return "/data/results.json";
-    return "https://raw.githubusercontent.com/IamDejman/osun-decides/main/data/results.json";
+    var u = "https://raw.githubusercontent.com/IamDejman/osun-decides/main/data/results.json";
+    return fresh ? u + "?t=" + Date.now() : u;
   }
 
   var btn = document.getElementById("refresh");
   function pull(manual) {
-    return fetch(resultsUrl(), { cache: "no-store" })
+    return fetch(resultsUrl(manual), { cache: "no-store" })
       .then(function (r) { return r.json(); })
       .then(function (n) {
         if (!n || !n.meta) return;

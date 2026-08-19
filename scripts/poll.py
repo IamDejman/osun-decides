@@ -10,7 +10,7 @@ actually read it.
 """
 import json, os, subprocess, sys, time, urllib.request
 import concurrent.futures as cf
-from common import (API, SHEETS, WORK, get, save_json)
+from common import (API, SHEETS, WORK, get, read_transcripts, save_json)
 
 INV = os.path.join(WORK, "inventory.json")
 
@@ -45,7 +45,9 @@ def download(code, url):
     dest = os.path.join(SHEETS, code.replace("/", "-") + ".jpg")
     if os.path.exists(dest):
         return False
-    tmp = dest + ".tmp"
+    # The launchd run and a hand-run sweep can overlap, so the scratch name
+    # has to be per-process or one run deletes the other's half-written file.
+    tmp = "%s.%d.tmp" % (dest, os.getpid())
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "osun-results/1.0"})
         with urllib.request.urlopen(req, timeout=90) as r, open(tmp, "wb") as f:
@@ -57,7 +59,8 @@ def download(code, url):
         return False
     subprocess.run(["sips", "-Z", "1500", "-s", "formatOptions", "68", tmp, "--out", dest],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    os.remove(tmp)
+    if os.path.exists(tmp):
+        os.remove(tmp)
     return True
 
 
@@ -100,9 +103,12 @@ def main():
     inv["remote_documents"] = remote_docs
     save_json(INV, inv)
 
-    # Pull down any sheet image we do not have yet.
+    # Pull down any sheet image we do not have yet. A unit that has already
+    # been transcribed needs no image: keeping that filter means losing the
+    # image cache costs one small catch-up fetch, not a refetch of every sheet.
+    done = set(read_transcripts().keys())
     todo = [(p["pu_code"], p["doc_url"]) for w in inv["wards"] for p in w["pus"]
-            if p.get("doc_url") and not os.path.exists(
+            if p.get("doc_url") and p["pu_code"] not in done and not os.path.exists(
                 os.path.join(SHEETS, p["pu_code"].replace("/", "-") + ".jpg"))]
     got = 0
     if todo:
