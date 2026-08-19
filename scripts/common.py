@@ -87,7 +87,15 @@ def validate(r):
 
     A unit is held only when the party column itself is unusable: a party
     row is null, or the form has no party figures and no box #7.
+
+    A unit INEC cancelled is the exception. Its sheet is Form EC40G, which
+    carries no party column at all, so the vote checks have nothing to test
+    and holding it for a human would be asking them to find figures that
+    were never printed.
     """
+    if r.get("not_held"):
+        return [], True
+
     critical, accounting = [], []
     s, illegible = party_column(r)
     valid = r.get("valid")

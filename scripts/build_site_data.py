@@ -21,16 +21,28 @@ def add(into, votes):
             into[p] += n
 
 
+def empty():
+    return {"votes": blank(), "registered": 0, "accredited": 0, "valid": 0,
+            "rejected": 0, "spoiled": 0, "pu_total": 0, "pu_uploaded": 0,
+            "pu_transcribed": 0, "pu_review": 0, "pu_cancelled": 0}
+
+
 def rollup(units):
     """Aggregate units whose party column could be read."""
-    t = {"votes": blank(), "registered": 0, "accredited": 0, "valid": 0,
-         "rejected": 0, "spoiled": 0, "pu_total": 0, "pu_uploaded": 0,
-         "pu_transcribed": 0, "pu_review": 0}
+    t = empty()
     for u in units:
         t["pu_total"] += 1
         if u["status"] == "awaiting":
             continue
         t["pu_uploaded"] += 1
+        # A cancelled unit cast no countable vote, but the people on its
+        # register and at its desk are real and belong in the state's
+        # registered and accredited figures.
+        if u["status"] == "cancelled":
+            t["pu_cancelled"] += 1
+            for k in ("registered", "accredited"):
+                t[k] += u.get(k) or 0
+            continue
         if u["status"] == "review":
             t["pu_review"] += 1
             continue
@@ -46,7 +58,8 @@ def rollup(units):
 def merge(dst, src):
     add(dst["votes"], src["votes"])
     for k in ("registered", "accredited", "valid", "rejected", "spoiled",
-              "pu_total", "pu_uploaded", "pu_transcribed", "pu_review"):
+              "pu_total", "pu_uploaded", "pu_transcribed", "pu_review",
+              "pu_cancelled"):
         dst[k] += src[k]
 
 
@@ -71,7 +84,11 @@ def main():
                 u["status"] = "pending"
             else:
                 reasons, ok = validate(r)
-                u["status"] = "transcribed" if ok else "review"
+                if r.get("not_held"):
+                    u["status"] = "cancelled"
+                    u["not_held"] = r["not_held"]
+                else:
+                    u["status"] = "transcribed" if ok else "review"
                 raw = r.get("votes") or {}
                 u["votes"] = {k: 0 if raw.get(k) is None else int(raw[k]) for k in PARTIES}
                 party_sum = sum(u["votes"].values())
@@ -82,7 +99,7 @@ def main():
                 # Report the party column. If box #7 is blank or disagrees,
                 # the published valid total is the party sum so it matches
                 # the votes that entered the headline.
-                if ok:
+                if ok and u["status"] != "cancelled":
                     sheet_valid = r.get("valid")
                     if sheet_valid is None or sheet_valid != party_sum:
                         u["valid"] = party_sum
@@ -107,15 +124,11 @@ def main():
         W["totals"] = rollup(units)
         L["wards"].append(W)
 
-    state = {"votes": blank(), "registered": 0, "accredited": 0, "valid": 0,
-             "rejected": 0, "spoiled": 0, "pu_total": 0, "pu_uploaded": 0,
-             "pu_transcribed": 0, "pu_review": 0}
+    state = empty()
     out_lgas = []
     for code in sorted(lgas):
         L = lgas[code]
-        t = {"votes": blank(), "registered": 0, "accredited": 0, "valid": 0,
-             "rejected": 0, "spoiled": 0, "pu_total": 0, "pu_uploaded": 0,
-             "pu_transcribed": 0, "pu_review": 0}
+        t = empty()
         for W in L["wards"]:
             merge(t, W["totals"])
         L["totals"] = t
@@ -141,9 +154,10 @@ def main():
               {"built_at": meta["built_at"], "items": review_queue}, indent=1)
 
     t = state
-    print("units %d | uploaded %d | transcribed %d | flagged %d | pending %d"
-          % (t["pu_total"], t["pu_uploaded"], t["pu_transcribed"], t["pu_review"],
-             t["pu_uploaded"] - t["pu_transcribed"] - t["pu_review"]))
+    print("units %d | uploaded %d | transcribed %d | cancelled %d | flagged %d | pending %d"
+          % (t["pu_total"], t["pu_uploaded"], t["pu_transcribed"], t["pu_cancelled"],
+             t["pu_review"],
+             t["pu_uploaded"] - t["pu_transcribed"] - t["pu_review"] - t["pu_cancelled"]))
     lead = sorted(t["votes"].items(), key=lambda kv: -kv[1])[:4]
     print("leading so far:", ", ".join("%s %s" % (k, v) for k, v in lead if v))
 

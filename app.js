@@ -76,6 +76,14 @@
   }
 
   /* ---------------- how much has been counted ---------------- */
+  /* A unit INEC cancelled will never produce a vote, so leaving it in the
+     outstanding pile would show a count that can never reach 100%. It is
+     settled, but it is not counted, so it is neither added to the counted
+     figure nor left pending. */
+  function settled(t) {
+    return (t.pu_transcribed || 0) + (t.pu_cancelled || 0);
+  }
+
   function countedRule(t) {
     var box = el("section", "counted");
     var fig = el("div", "cfig");
@@ -90,6 +98,10 @@
     var a = el("i", "done"); a.style.width = pct(t.pu_transcribed, t.pu_total) + "%";
     m.appendChild(a);
     box.appendChild(m);
+    if (t.pu_cancelled) {
+      box.appendChild(el("div", "cmeta",
+        fmt(t.pu_cancelled) + " further units were cancelled by INEC, so they carry no votes"));
+    }
     return box;
   }
 
@@ -250,9 +262,9 @@
         // "how big is the lead". Encoding the margin instead made a fully
         // counted LGA with a modest lead look paler than a barely started one
         // with a wide early lead - exactly backwards for reading the map.
-        op = (t && t.pu_total && t.pu_transcribed === t.pu_total) ? 1 : 0.34;
+        op = (t && t.pu_total && settled(t) === t.pu_total) ? 1 : 0.34;
       }
-      var complete = !!(t && t.pu_total && t.pu_transcribed === t.pu_total);
+      var complete = !!(t && t.pu_total && settled(t) === t.pu_total);
       // A plain-text summary for screen readers and as the accessible name.
       // Deliberately NOT an SVG <title>: the browser draws its own tooltip
       // from that, on top of the styled one, and you get two boxes at once.
@@ -276,7 +288,9 @@
         if (complete) {
           var tick = el("span", "tipdone");
           tick.appendChild(el("i", "tick", "✓"));
-          tick.appendChild(document.createTextNode("all " + t.pu_total + " units counted"));
+          tick.appendChild(document.createTextNode(t.pu_cancelled
+            ? "all " + t.pu_total + " units in, " + t.pu_cancelled + " cancelled"
+            : "all " + t.pu_total + " units counted"));
           head.appendChild(tick);
         } else if (t) {
           head.appendChild(el("span", "tipunits",
@@ -407,7 +421,10 @@
     var top = el("div", "putop");
     top.appendChild(el("span", "pucode", u.code));
     top.appendChild(el("span", "puname", u.name || "-"));
-    if (!u.votes) top.appendChild(el("span", "chip await", "Not counted"));
+    if (u.status === "cancelled") {
+      top.appendChild(el("span", "chip warn", "Cancelled: " +
+        String(u.not_held || "").toLowerCase()));
+    } else if (!u.votes) top.appendChild(el("span", "chip await", "Not counted"));
     else if (u.flag) top.appendChild(el("span", "chip warn", u.flag));
     if (u.img && /^https:\/\//i.test(u.img)) {
       var a = el("a", "chip sheet", "Sheet");

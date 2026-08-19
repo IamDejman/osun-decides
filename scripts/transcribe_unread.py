@@ -24,6 +24,8 @@ Schema:
 Field map: sn = 7-digit serial; registered #1; accredited #2; issued #3; unused #4; spoiled #5; rejected #6; valid #7; used #8; votes = 15 party figures in order A AA AAC ADC ADP APC APGA APM APP BP NNPP PRP SDP YPP ZLP; po = presiding officer; date on the stamp.
 
 Rules: blank/dash party row = 0. Prefer figures. If a box is illegible use null and add "unclear". If party figures do not sum to box #7, still record what you see. Do not invent numbers. pu_code is %s. pu_name is %s if the header is hard to read.
+
+If the sheet is Form EC40G rather than EC8A, the election was cancelled or never held there and no party figures exist. Return the same object with every party at 0, registered and accredited as recorded, every ballot box null, and "not_held" set to the reason the form gives, such as OVERVOTING or VIOLENCE.
 """
 
 

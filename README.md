@@ -129,6 +129,25 @@ Set a field to `null` when a box is genuinely illegible, and add an `unclear`
 string describing the problem. A null party row holds the unit; other notes
 are reported and the party figures are still counted.
 
+## Units where the election was cancelled
+
+INEC uploads Form EC40G in place of an EC8A when a poll was cancelled or never
+held. That form carries a register and an accreditation count but no party
+column at all, so the vote checks have nothing to test.
+
+Give such a record `"not_held"` set to the reason the form states:
+
+```json
+{"pu_code":"29/29/04/004","pu_name":"AYETORO AREA","not_held":"OVERVOTING",
+ "registered":1163,"accredited":548,"votes":{"A":0,"...":0}}
+```
+
+The unit is then published with status `cancelled`. It contributes no votes,
+and it is not left sitting in the outstanding pile where it would keep the
+count from ever reaching every unit. Its registered and accredited voters do
+join the state totals, because those people were on the register and were
+accredited even though their ballots were voided.
+
 ## Layout
 
 ```
