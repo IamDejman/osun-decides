@@ -19,8 +19,8 @@
   "YPP",
   "ZLP"
  ],
- "polled_at": "2026-08-19T05:43:04Z",
- "built_at": "2026-08-19T05:44:07Z",
+ "polled_at": "2026-08-19T06:01:08Z",
+ "built_at": "2026-08-19T06:01:09Z",
  "remote_documents": 3752,
  "source": "https://www.inecelectionresults.ng/elections/6a7f788adcbc755a763f082a",
  "totals": {
@@ -41,14 +41,15 @@
    "YPP": 532,
    "ZLP": 2482
   },
-  "registered": 2286934,
-  "accredited": 1008044,
+  "registered": 2301493,
+  "accredited": 1012981,
   "valid": 984692,
   "rejected": 20252,
   "spoiled": 3781,
   "pu_total": 3763,
   "pu_uploaded": 3752,
   "pu_transcribed": 3734,
-  "pu_review": 18
+  "pu_review": 1,
+  "pu_cancelled": 17
  }
 }
